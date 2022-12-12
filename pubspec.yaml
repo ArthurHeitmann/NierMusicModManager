@@ -1,0 +1,54 @@
+name: nier_music_mod_manager
+description: A new Flutter project.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.18.1 <3.0.0'
+
+dependencies:
+  archive: ^3.3.2
+  desktop_drop: ^0.3.3
+  file_picker: ^5.2.0
+  flutter:
+    sdk: flutter
+  flutter_launcher_icons: ^0.10.0
+  fluttertoast: ^8.0.9
+  path: ^1.8.2
+  shared_preferences: ^2.0.15
+  window_manager: ^0.2.7
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/
+
+  fonts:
+    - family: FiraCode
+      fonts:
+        - asset: assets/fonts/FiraCode-Medium.ttf
+        - asset: assets/fonts/FiraCode-Bold.ttf
+        - asset: assets/fonts/FiraCode-SemiBold.ttf
+          weight: 700
+
+flutter_icons:
+  # to update icons run
+  # > flutter pub run flutter_launcher_icons:main
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  web:
+    generate: true
+  windows:
+    generate: true
