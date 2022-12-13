@@ -14,6 +14,7 @@ import '../widgets/misc/infoDialog.dart';
 
 Future<AudioModsMetadata> installMod(String zipPath, String waiPath) async {
   var tmpDir = await Directory.systemTemp.createTemp("nier_music_mod_installer");
+  List<String> changedFiles = [];
   try {
     var fs = InputFileStream(zipPath);
     var archive = ZipDecoder().decodeBuffer(fs);
@@ -29,11 +30,31 @@ Future<AudioModsMetadata> installMod(String zipPath, String waiPath) async {
     if (metadata.moddedBnkChunks.isEmpty && metadata.moddedWaiChunks.isEmpty)
       throw Exception("No modded files found in archive");
 
-    await _patchWaiAndWsps(metadata.moddedWaiChunks, tmpDir.path, waiPath);
-    await _patchBgmBnk(metadata.moddedBnkChunks, tmpDir.path, waiPath);
+    // apply patches
+    await _patchWaiAndWsps(metadata.moddedWaiChunks, tmpDir.path, waiPath, changedFiles);
+    await _patchBgmBnk(metadata.moddedBnkChunks, tmpDir.path, waiPath, changedFiles);
+
+    // delete original backup files
+    for (var file in changedFiles) {
+      var originalPath = "$file.original";
+      await File(originalPath).delete();
+    }
 
     return metadata;
   } catch (e) {
+    // restore original files
+    for (var file in changedFiles) {
+      var originalPath = "$file.original";
+      if (!await File(originalPath).exists()) {
+        print("Failed to restore original file $file");
+        continue;
+      }
+      if (await File(file).exists())
+        await File(file).delete();
+      await File(originalPath).rename(file);
+      print("Restored original file $file");
+    }
+
     await infoDialog(getGlobalContext(), text: "Failed to install mod :/");
     rethrow;
   } finally {
@@ -50,7 +71,7 @@ class _WspIndex {
   @override
   int get hashCode => Object.hash(nameIndex, index);
 }
-Future<void> _patchWaiAndWsps(Map<int, AudioModChunkInfo> moddedWaiChunks, String tmpDir, String waiPath) async {
+Future<void> _patchWaiAndWsps(Map<int, AudioModChunkInfo> moddedWaiChunks, String tmpDir, String waiPath, List<String> changedFiles) async {
   if (moddedWaiChunks.isEmpty)
     return;
   var newWaiPath = join(tmpDir, "WwiseStreamInfo.wai");
@@ -107,12 +128,13 @@ Future<void> _patchWaiAndWsps(Map<int, AudioModChunkInfo> moddedWaiChunks, Strin
     var wspName = firstWemInWsp.wemToWspName(newWai.wspNames);
 
     var originalWspPath = join(wspSaveDir, wspName);
+    var modWspPath = join(modWspDir, "stream", wspName);
     var tmpNewWspPath = join(tmpDir, wspName);
     await File(originalWspPath).copy(tmpNewWspPath);
 
     // open files
-    var originalWsp = await File(join(wspSaveDir, wspName)).open();
-    var modWsp = await File(join(modWspDir, wspName)).open();
+    var originalWsp = await File(originalWspPath).open();
+    var modWsp = await File(modWspPath).open();
     var newWsp = await File(tmpNewWspPath).open(mode: FileMode.writeOnly);
 
     // place WEMs in new WSP
@@ -123,7 +145,7 @@ Future<void> _patchWaiAndWsps(Map<int, AudioModChunkInfo> moddedWaiChunks, Strin
       int srcOffset;
       if (moddedWaiChunks.containsKey(wem.wemID)) {
         srcWsp = modWsp;
-        srcOffset = wem.wemOffset;
+        srcOffset = newWai.getWemFromId(wem.wemID).wemOffset;
       } else {
         srcWsp = originalWsp;
         srcOffset = originalWemsById[wem.wemID]!.wemOffset;
@@ -135,26 +157,37 @@ Future<void> _patchWaiAndWsps(Map<int, AudioModChunkInfo> moddedWaiChunks, Strin
       await newWsp.setPosition(wem.wemOffset);
       await newWsp.writeFrom(wemData);
     }
+    var endPos = await newWsp.position();
+    var alignBytes = List.filled(2048 - endPos % 2048, 0);
+    await newWsp.writeFrom(alignBytes);
 
     // close files
     await originalWsp.close();
     await modWsp.close();
     await newWsp.close();
 
-    // replace original WSP with new WSP
+    // backup original WSP
     await backupFile(originalWspPath);
+    var originalBackupPath = "$originalWspPath.original";
+    await File(originalWspPath).copy(originalBackupPath);
+    changedFiles.add(originalWspPath);
+    // replace original WSP with new WSP
     await File(originalWspPath).delete();
     await File(tmpNewWspPath).copy(originalWspPath);
   }
 
-  // save new WAI
+  // backup original WAI
   await backupFile(waiPath);
+  var originalBackupPath = "$waiPath.original";
+  await File(waiPath).copy(originalBackupPath);
+  changedFiles.add(waiPath);
+  // save new WAI
   var newWaiBytes = ByteDataWrapper.allocate(originalWai.size);
   originalWai.write(newWaiBytes);
   await File(waiPath).writeAsBytes(newWaiBytes.buffer.asUint8List());
 }
 
-Future<void> _patchBgmBnk(Map<int, AudioModChunkInfo> moddedBnkChunks, String tmpDir, String waiPath) async {
+Future<void> _patchBgmBnk(Map<int, AudioModChunkInfo> moddedBnkChunks, String tmpDir, String waiPath, List<String> changedFiles) async {
   if (moddedBnkChunks.isEmpty)
     return;
   
@@ -187,13 +220,17 @@ Future<void> _patchBgmBnk(Map<int, AudioModChunkInfo> moddedBnkChunks, String tm
   // calculate new HIRC chunk size
   var hircChunk = originalBnk.chunks.whereType<BnkHircChunk>().first;
   var prevSize = hircChunk.chunkSize;
-  var newSize = hircChunk.chunks.fold(0, (prev, chunk) => prev + chunk.size);
+  var newSize = hircChunk.chunks.fold(0, (prev, chunk) => prev + chunk.size + 5);
   newSize += 4; // children count
   hircChunk.chunkSize = newSize;
   var sizeDiff = newSize - prevSize;
 
-  // save new BNK
+  // backup original BNK
   await backupFile(originalBnkPath);
+  var originalBackupPath = "$originalBnkPath.original";
+  await File(originalBnkPath).copy(originalBackupPath);
+  changedFiles.add(originalBnkPath);
+  // save new BNK
   var newBnkBytes = ByteDataWrapper.allocate(originalBnkBytes.length + sizeDiff);
   originalBnk.write(newBnkBytes);
   await File(originalBnkPath).writeAsBytes(newBnkBytes.buffer.asUint8List());

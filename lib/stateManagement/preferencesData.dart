@@ -3,7 +3,6 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,16 +10,15 @@ import '../main.dart';
 import '../widgets/misc/infoDialog.dart';
 
 class PreferencesData {
-  static final PreferencesData _instance = PreferencesData._();
+  Future<SharedPreferences> _prefsFuture;
   SharedPreferences? _prefs;
   String _waiPath = "";
   String get waiPath => _waiPath;
 
-  PreferencesData._();
-  factory PreferencesData() => _instance;
+  PreferencesData() : _prefsFuture = SharedPreferences.getInstance();
 
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+    _prefs = await _prefsFuture;
     _waiPath = _prefs!.getString("waiPath") ?? "";
   }
 

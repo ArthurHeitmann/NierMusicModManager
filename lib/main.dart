@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'stateManagement/dataCollection.dart';
 import 'stateManagement/preferencesData.dart';
 import 'statemanagement/installedMods.dart';
 import 'utils/loggingWrapper.dart';
@@ -31,7 +32,6 @@ void init() async {
     // await windowManager.focus();
   });
 
-  await PreferencesData().init();
   await installedMods.load();
 
   runApp(const MyApp());
@@ -65,6 +65,16 @@ class _MyAppState extends State<MyApp> {
           cursorColor: NierTheme.dark,
           selectionColor: NierTheme.brownDark,
           selectionHandleColor: NierTheme.brownDark,
+        ),
+        scrollbarTheme: ScrollbarThemeData(
+          thumbColor: MaterialStateProperty.all(NierTheme.dark),
+          thickness: MaterialStateProperty.all(5.5),
+          thumbVisibility: MaterialStateProperty.all(true),
+          radius: Radius.zero,
+        ),
+        colorScheme: const ColorScheme.light(
+          primary: NierTheme.dark,
+          secondary: NierTheme.brownDark,
         ),
       ),
       home: MyAppBody(key: _rootKey)

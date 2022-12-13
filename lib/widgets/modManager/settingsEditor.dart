@@ -1,7 +1,11 @@
 
 import 'package:flutter/material.dart';
 
+import '../../fileTypeUtils/audio/audioModsChangesUndo.dart';
+import '../../stateManagement/dataCollection.dart';
 import '../../stateManagement/preferencesData.dart';
+import '../misc/confirmDialog.dart';
+import '../misc/infoDialog.dart';
 import '../theme/NierButton.dart';
 import '../theme/NierTextField.dart';
 
@@ -18,12 +22,11 @@ class _SettingsEditorState extends State<SettingsEditor> {
   @override
   void initState() {
     super.initState();
-    waiPathController = TextEditingController(text: PreferencesData().waiPath);
+    waiPathController = TextEditingController(text: prefs.waiPath);
     waiPathController.addListener(_onWaiPathChanged);
   }
 
   void _onWaiPathChanged() {
-    var prefs = PreferencesData();
     prefs.waiPath = waiPathController.text;
   }
 
@@ -37,17 +40,24 @@ class _SettingsEditorState extends State<SettingsEditor> {
         NierTextField(
           controller: waiPathController,
           width: 500,
-          onChanged: (value) => PreferencesData().waiPath = value,
+          onChanged: (value) => prefs.waiPath = value,
         ),
         const SizedBox(height: 32),
         NierButton(
           text: "Select Game Path",
           icon: Icons.folder_open,
-          onPressed: () => PreferencesData().selectWaiPath()
+          onPressed: () => prefs.selectWaiPath()
             .then((_) {
-              waiPathController.text = PreferencesData().waiPath;
+              waiPathController.text = prefs.waiPath;
             }),
-          width: 300,
+          width: 310,
+        ),
+        const SizedBox(height: 64),
+        NierButton(
+          text: "Revert all changes",
+          icon: Icons.undo,
+          onPressed: () => installedMods.reset(),
+          width: 310,
         ),
       ],
     );

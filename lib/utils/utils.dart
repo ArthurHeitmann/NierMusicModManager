@@ -174,7 +174,7 @@ Future<String?> getClipboardText() async {
   return (await Clipboard.getData(Clipboard.kTextPlain))?.text;
 }
 
-Key makeReferenceKey(Key key) {
+Key? makeReferenceKey(Key? key) {
   if (key is GlobalKey || key is UniqueKey)
     return ValueKey(key);
   return key;

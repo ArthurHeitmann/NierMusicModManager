@@ -115,7 +115,7 @@ class _FlexReorderableState extends State<FlexReorderable> {
 
   @override
   void initState() {
-    comparisonKeys = List<Key>.generate(widget.children.length, (i) => makeReferenceKey(widget.children[i].key!));
+    comparisonKeys = List<Key>.generate(widget.children.length, (i) => makeReferenceKey(widget.children[i].key!)!);
     super.initState();
   }
 
@@ -153,13 +153,13 @@ class _FlexReorderableState extends State<FlexReorderable> {
     
     List<Size> newSizes = List.filled(widget.children.length, Size.zero);
     for (var i = 0; i < widget.children.length; i++) {
-      var oldPos = comparisonKeys.indexOf(makeReferenceKey(widget.children[i].key!));
+      var oldPos = comparisonKeys.indexOf(makeReferenceKey(widget.children[i].key!)!);
       if (oldPos != -1)
         newSizes[i] = _childrenSizes[oldPos];
     }
     _childrenSizes.clear();
     _childrenSizes.addAll(newSizes);
-    comparisonKeys = List<Key>.generate(widget.children.length, (i) => makeReferenceKey(widget.children[i].key!));
+    comparisonKeys = List<Key>.generate(widget.children.length, (i) => makeReferenceKey(widget.children[i].key!)!);
   }
 
   List<Size> getChildrenSizes() {

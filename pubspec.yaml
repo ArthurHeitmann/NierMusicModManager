@@ -37,6 +37,7 @@ flutter:
   fonts:
     - family: FiraCode
       fonts:
+        - asset: assets/fonts/FiraCode-Regular.ttf
         - asset: assets/fonts/FiraCode-Medium.ttf
         - asset: assets/fonts/FiraCode-Bold.ttf
         - asset: assets/fonts/FiraCode-SemiBold.ttf

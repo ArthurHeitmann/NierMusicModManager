@@ -55,19 +55,24 @@ Future<void> revertAllAudioMods(String waiPath) async {
   if (confirmation != true)
     return;
 
+  int restoreCount = 0;
+  int warningCount = 0;
   for (var changedFile in changedFiles) {
     var backupPath = "$changedFile.backup";
     if (!await File(backupPath).exists()) {
       print("Backup file not found for $changedFile");
+      warningCount++;
       continue;
     }
     try {
       if (await File(changedFile).exists())
         await File(changedFile).delete();
       await File(backupPath).rename(changedFile);
+      restoreCount++;
     } catch (e) {
       print("Failed to restore $changedFile");
       print(e);
+      warningCount++;
     }
   }
 
@@ -76,12 +81,12 @@ Future<void> revertAllAudioMods(String waiPath) async {
   metadata.moddedBnkChunks.clear();
   await metadata.toFile(metadataPath);
 
-  // if (restoreCount == 0) TODO
-  //   showToast("No files to restore");
-  // else
-  //   showToast("Restored ${pluralStr(restoreCount, "file")}");
-  // messageLog.add(
-  //   "Restored ${pluralStr(restoreCount, "file")}"
-  //   "${warningCount > 0 ? ", ${pluralStr(warningCount, "warning")}" : ""}"
-  // );
+  print(
+    "Restored ${pluralStr(restoreCount, "file")}"
+    "${warningCount > 0 ? ", ${pluralStr(warningCount, "warning")}" : ""}"
+  );
+  if (restoreCount == 0)
+    await infoDialog(getGlobalContext(), text: "No files to restore");
+  else
+    await infoDialog(getGlobalContext(), text: "Restored ${pluralStr(restoreCount, "file")}");
 }

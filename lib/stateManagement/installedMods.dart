@@ -4,9 +4,12 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 
+import '../fileTypeUtils/audio/audioModsChangesUndo.dart';
 import '../fileTypeUtils/audio/audioModsMetadata.dart';
 import '../main.dart';
+import '../widgets/misc/confirmDialog.dart';
 import '../widgets/misc/infoDialog.dart';
+import 'dataCollection.dart';
 import 'modInstaller.dart';
 import 'preferencesData.dart';
 
@@ -30,17 +33,19 @@ class AudioMod {
 
 class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
   final List<AudioMod> _mods = [];
-  static ValueNotifier<AudioMod?> selectedMod = ValueNotifier<AudioMod?>(null);
+  ValueNotifier<int> selectedMod = ValueNotifier(-1);
 
   Future<void> load() async {
-    var prefs = PreferencesData();
+    await prefs.init();
     if (prefs.waiPath.isEmpty)
       return;
     
     AudioModsMetadata metadata;
     try {
-      metadata = await AudioModsMetadata.fromFile(prefs.waiPath);
+      var metadataPath = join(dirname(prefs.waiPath), audioModsMetadataFileName);
+      metadata = await AudioModsMetadata.fromFile(metadataPath);
     } catch (e) {
+      print(e);
       await infoDialog(getGlobalContext(), text: "Failed to load installed mods :/");
       return;
     }
@@ -65,14 +70,17 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
       mods[name]!.moddedBnkChunks.add(chunk);
     }
     _mods.addAll(mods.values);
+    if (_mods.isNotEmpty)
+      selectedMod.value = 0;
     notifyListeners();
   }
 
   @override
   Iterator<AudioMod> get iterator => _mods.iterator;
 
+  AudioMod operator [](int index) => _mods[index];
+
   Future<void> install(String zipPath) async {
-    var prefs = PreferencesData();
     var waiPath = prefs.waiPath;
     if (waiPath.isEmpty) {
       await infoDialog(getGlobalContext(), text: "Please set a WAI file first");
@@ -95,8 +103,8 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
     }
 
     // update metadata file
-    var metadataPath = dirname(waiPath);
-    var metadata = await AudioModsMetadata.fromFile(waiPath);
+    var metadataPath = join(dirname(waiPath), audioModsMetadataFileName);
+    var metadata = await AudioModsMetadata.fromFile(metadataPath);
     metadata.moddedWaiChunks.addAll(modMetadata.moddedWaiChunks);
     metadata.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks);
     await metadata.toFile(metadataPath);
@@ -118,6 +126,8 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
     mod.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks.values);
 
     notifyListeners();
+
+    await infoDialog(getGlobalContext(), text: "Installation complete! :)");
   }
 
   Future<void> uninstall(AudioMod mod) async {
@@ -127,9 +137,13 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
   }
 
   Future<void> reset() async {
-    // TODO
+    if (prefs.waiPath.isEmpty) {
+      infoDialog(getGlobalContext(), text: "No WAI path set");
+      return;
+    }
+    await revertAllAudioMods(prefs.waiPath);
     _mods.clear();
+    selectedMod.value = -1;
     notifyListeners();
   }
 }
-final installedMods = InstalledMods();
