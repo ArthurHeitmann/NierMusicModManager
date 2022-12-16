@@ -119,9 +119,9 @@ class _NierButtonFancyState extends State<NierButtonFancy> {
                                 ) : null
                             ),
                             const SizedBox(width: 16),
-                            Flexible(
+                            Expanded(
                               child: Text(
-                                widget.text.replaceAll(" ", '\u{000A0}'),
+                                widget.text,
                                 style: TextStyle(
                                   color: isHovering ? NierTheme.light : NierTheme.dark,
                                   fontWeight: FontWeight.w500,
@@ -130,7 +130,6 @@ class _NierButtonFancyState extends State<NierButtonFancy> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const Spacer(),
                             if (widget.rightText != null)
                               Text(
                                 widget.rightText!,

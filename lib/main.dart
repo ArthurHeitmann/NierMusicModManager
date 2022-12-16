@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'stateManagement/dataCollection.dart';
+import 'stateManagement/dataInstances.dart';
 import 'stateManagement/preferencesData.dart';
 import 'statemanagement/installedMods.dart';
 import 'utils/loggingWrapper.dart';

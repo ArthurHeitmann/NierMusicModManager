@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../fileTypeUtils/audio/audioModsChangesUndo.dart';
-import '../../stateManagement/dataCollection.dart';
+import '../../stateManagement/dataInstances.dart';
 import '../../stateManagement/preferencesData.dart';
 import '../misc/confirmDialog.dart';
 import '../misc/infoDialog.dart';

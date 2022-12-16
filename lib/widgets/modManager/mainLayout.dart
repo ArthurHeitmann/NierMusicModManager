@@ -3,10 +3,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../../stateManagement/dataCollection.dart';
+import '../../stateManagement/dataInstances.dart';
 import '../../utils/utils.dart';
+import '../misc/ChangeNotifierWidget.dart';
 import '../misc/RowSeparated.dart';
 import '../theme/NierButton.dart';
+import '../theme/NierSavingIndicator.dart';
 import '../theme/customTheme.dart';
 import 'modManager.dart';
 import 'settingsEditor.dart';
@@ -125,6 +127,16 @@ class _MainLayoutState extends State<MainLayout> {
             ),
           ),
         ),
+        Positioned(
+          top: 12,
+          right: 28,
+          child: ChangeNotifierBuilder(
+            notifier: statusInfo.isBusy,
+            builder: (context) => statusInfo.isBusy.value
+              ? const NierSavingIndicator()
+              : const SizedBox.shrink(),
+          ),
+        )
       ],
     );
   }

@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../../stateManagement/dataCollection.dart';
+import '../../stateManagement/dataInstances.dart';
 import '../../stateManagement/installedMods.dart';
 import '../theme/NierButton.dart';
 import '../theme/NierButtonFancy.dart';
@@ -45,6 +45,7 @@ class _ModManagerState extends State<ModManager> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             NierListView(
               // constraints: const BoxConstraints(maxWidth: 650),
@@ -56,7 +57,7 @@ class _ModManagerState extends State<ModManager> {
                     isSelected: installedMods.selectedMod.value == i,
                     text: installedMods[i].name,
                     icon: Icons.music_note,
-                    rightText: "【${installedMods[i].moddedWaiChunks.length + 2}】",
+                    rightText: "【${installedMods[i].moddedWaiChunks.length + installedMods[i].moddedBnkChunks.length}】",
                   ),
                 if (installedMods.isEmpty)
                   const SizedBox(
@@ -67,7 +68,6 @@ class _ModManagerState extends State<ModManager> {
                   )
               ],
             ),
-            SizedBox(width: max(0, constraints.maxWidth - 650 - 500)),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 500),
               child: NierSidebar(
@@ -78,8 +78,8 @@ class _ModManagerState extends State<ModManager> {
                     rightText: selectedMod.name,
                   ),
                   NierSidebarRow(
-                    leftText: "Affected files:",
-                    rightText: "${1 + selectedMod.moddedWaiChunks.length + (selectedMod.moddedBnkChunks.isNotEmpty ? 1 : 0)}",
+                    leftText: "Affected data chunks:",
+                    rightText: "${selectedMod.moddedWaiChunks.length + selectedMod.moddedBnkChunks.length}",
                   ),
                   if (selectedMod.installedOn != null)
                     NierSidebarRow(
@@ -89,6 +89,13 @@ class _ModManagerState extends State<ModManager> {
                       "${selectedMod.installedOn!.month.toString().padLeft(2, "0")}-"
                       "${selectedMod.installedOn!.day.toString().padLeft(2, "0")}",
                     ),
+                  const Expanded(child: SizedBox()),
+                  NierButton(
+                    width: double.infinity,
+                    icon: Icons.delete_outline,
+                    onPressed: () => installedMods.uninstall(selectedMod),
+                    text: "Uninstall",
+                  ),
                 ] : [
                   const SizedBox(
                     height: 100,

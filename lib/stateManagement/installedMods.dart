@@ -1,5 +1,6 @@
 
 import 'dart:collection';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
@@ -7,11 +8,13 @@ import 'package:path/path.dart';
 import '../fileTypeUtils/audio/audioModsChangesUndo.dart';
 import '../fileTypeUtils/audio/audioModsMetadata.dart';
 import '../main.dart';
+import '../utils/utils.dart';
 import '../widgets/misc/confirmDialog.dart';
 import '../widgets/misc/infoDialog.dart';
-import 'dataCollection.dart';
+import 'dataInstances.dart';
+import 'dataInstances.dart';
 import 'modInstaller.dart';
-import 'preferencesData.dart';
+import 'modsUninstaller.dart';
 
 class AudioMod {
   final String name;
@@ -26,8 +29,16 @@ class AudioMod {
     required this.moddedBnkChunks,
   });
 
-  Future<void> _remove() async {
-    // TODO
+  Future<void> _uninstall() async {
+    var waiPath = prefs.waiPath;
+    await uninstallMods(waiPath, moddedWaiChunks, moddedBnkChunks);
+    var metadataPath = join(dirname(waiPath), audioModsMetadataFileName);
+    var metadata = await AudioModsMetadata.fromFile(metadataPath);
+    for (var chunk in moddedWaiChunks)
+      metadata.moddedWaiChunks.remove(chunk.id);
+    for (var chunk in moddedBnkChunks)
+      metadata.moddedBnkChunks.remove(chunk.id);
+    await metadata.toFile(metadataPath);
   }
 }
 
@@ -86,54 +97,87 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
       await infoDialog(getGlobalContext(), text: "Please set a WAI file first");
       return;
     }
+
+    statusInfo.isBusy.value = true;
+    await waitForNextFrame();
     
     // install mod
-    var modMetadata = await installMod(zipPath, waiPath);
-    
-    // make new metadata info
-    var modName = modMetadata.name ?? "Uncategorized";
-    var installationDate = DateTime.now();
-    var newChunks = [
-      ...modMetadata.moddedWaiChunks.values,
-      ...modMetadata.moddedBnkChunks.values,
-    ];
-    for (var newChunk in newChunks) {
-      newChunk.name = modName;
-      newChunk.timestamp = installationDate.millisecondsSinceEpoch;
+    AudioModsMetadata modMetadata;
+    try {
+      modMetadata = await installMod(zipPath, waiPath);
+    } catch (e) {
+      statusInfo.isBusy.value = false;
+      rethrow;
     }
 
-    // update metadata file
-    var metadataPath = join(dirname(waiPath), audioModsMetadataFileName);
-    var metadata = await AudioModsMetadata.fromFile(metadataPath);
-    metadata.moddedWaiChunks.addAll(modMetadata.moddedWaiChunks);
-    metadata.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks);
-    await metadata.toFile(metadataPath);
 
-    // update installed mods list
-    AudioMod mod;
-    if (_mods.any((m) => m.name == modName)) {
-      mod = _mods.firstWhere((m) => m.name == modName);
-    } else {
-      mod = AudioMod(
-        name: modName,
-        installedOn: installationDate,
-        moddedWaiChunks: [],
-        moddedBnkChunks: [],
-      );
-      _mods.add(mod);
+    try {
+      // make new metadata info
+      var modName = modMetadata.name ?? "Uncategorized";
+      var installationDate = DateTime.now();
+      var newChunks = [
+        ...modMetadata.moddedWaiChunks.values,
+        ...modMetadata.moddedBnkChunks.values,
+      ];
+      for (var newChunk in newChunks) {
+        newChunk.name = modName;
+        newChunk.timestamp = installationDate.millisecondsSinceEpoch;
+      }
+
+      // update metadata file
+      var metadataPath = join(dirname(waiPath), audioModsMetadataFileName);
+      var metadata = await AudioModsMetadata.fromFile(metadataPath);
+      metadata.moddedWaiChunks.addAll(modMetadata.moddedWaiChunks);
+      metadata.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks);
+      await metadata.toFile(metadataPath);
+
+      // update installed mods list
+      AudioMod mod;
+      if (_mods.any((m) => m.name == modName)) {
+        mod = _mods.firstWhere((m) => m.name == modName);
+      } else {
+        mod = AudioMod(
+          name: modName,
+          installedOn: installationDate,
+          moddedWaiChunks: [],
+          moddedBnkChunks: [],
+        );
+        _mods.add(mod);
+      }
+      mod.moddedWaiChunks.addAll(modMetadata.moddedWaiChunks.values);
+      mod.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks.values);
+
+      notifyListeners();
+      statusInfo.isBusy.value = false;
+      
+      await infoDialog(getGlobalContext(), text: "Installation complete! :)");
+    } catch (e) {
+      statusInfo.isBusy.value = false;
+      await infoDialog(getGlobalContext(), text: "Installation failed :/");
+      rethrow;
     }
-    mod.moddedWaiChunks.addAll(modMetadata.moddedWaiChunks.values);
-    mod.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks.values);
 
-    notifyListeners();
-
-    await infoDialog(getGlobalContext(), text: "Installation complete! :)");
   }
 
   Future<void> uninstall(AudioMod mod) async {
-    await mod._remove();
-    _mods.remove(mod);
-    notifyListeners();
+    if (await confirmDialog(getGlobalContext(), text: "Are you sure you want to uninstall this mod?") != true)
+      return;
+
+    try {
+      statusInfo.isBusy.value = true;
+      await waitForNextFrame();
+      await mod._uninstall();
+      _mods.remove(mod);
+      selectedMod.value = min(selectedMod.value, _mods.length - 1);
+      
+      notifyListeners();
+      statusInfo.isBusy.value = false;
+      
+      await infoDialog(getGlobalContext(), text: "Mod uninstalled! :)");
+    } catch (e) {
+      statusInfo.isBusy.value = false;
+      rethrow;
+    }
   }
 
   Future<void> reset() async {
@@ -141,9 +185,17 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
       infoDialog(getGlobalContext(), text: "No WAI path set");
       return;
     }
-    await revertAllAudioMods(prefs.waiPath);
-    _mods.clear();
-    selectedMod.value = -1;
-    notifyListeners();
+    try {
+      statusInfo.isBusy.value = true;
+      await revertAllAudioMods(prefs.waiPath);
+      _mods.clear();
+      selectedMod.value = -1;
+      notifyListeners();
+      statusInfo.isBusy.value = false;
+    } catch (e) {
+      statusInfo.isBusy.value = false;
+      await infoDialog(getGlobalContext(), text: "Failed to reset mods :/");
+      rethrow;
+    }
   }
 }

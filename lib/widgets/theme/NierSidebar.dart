@@ -31,11 +31,13 @@ class NierSidebar extends StatelessWidget {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: ColumnSeparated(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: children,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: ColumnSeparated(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: children,
+                  ),
                 ),
               ),
             ],
@@ -54,23 +56,26 @@ class NierSidebarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          leftText,
-          style: const TextStyle(fontSize: 19),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          fit: FlexFit.tight,
-          flex: 2,
-          child: Text(
-            rightText,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Text(
+            leftText,
             style: const TextStyle(fontSize: 19),
-            textAlign: TextAlign.right,
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Flexible(
+            fit: FlexFit.tight,
+            flex: 2,
+            child: Text(
+              rightText,
+              style: const TextStyle(fontSize: 19),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
