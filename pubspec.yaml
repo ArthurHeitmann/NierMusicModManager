@@ -10,7 +10,6 @@ environment:
 
 dependencies:
   archive: ^3.3.2
-  desktop_drop: ^0.3.3
   file_picker: ^5.2.0
   flutter:
     sdk: flutter

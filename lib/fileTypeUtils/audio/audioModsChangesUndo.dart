@@ -11,11 +11,11 @@ import '../utils/ByteDataWrapper.dart';
 import 'audioModsMetadata.dart';
 import 'waiIO.dart';
 
-Future<void> revertAllAudioMods(String waiPath) async {
+Future<bool> revertAllAudioMods(String waiPath) async {
   var metadataPath = join(dirname(waiPath), audioModsMetadataFileName);
   if (!await File(metadataPath).exists()) {
     await infoDialog(getGlobalContext(), text: "No audio mods metadata fiel found");
-    return;
+    return false;
   }
   var metadata = await AudioModsMetadata.fromFile(metadataPath);
   var wai = WaiFile.read(await ByteDataWrapper.fromFile(waiPath));
@@ -45,7 +45,7 @@ Future<void> revertAllAudioMods(String waiPath) async {
 
   if (changedFiles.isEmpty) {
     await infoDialog(getGlobalContext(), text: "No files to restore");
-    return;
+    return false;
   }
 
   var confirmation = await confirmDialog(
@@ -53,7 +53,7 @@ Future<void> revertAllAudioMods(String waiPath) async {
     text: "Revert ${pluralStr(changedFiles.length, "file")}?",
   );
   if (confirmation != true)
-    return;
+    return false;
 
   int restoreCount = 0;
   int warningCount = 0;
@@ -89,4 +89,6 @@ Future<void> revertAllAudioMods(String waiPath) async {
     await infoDialog(getGlobalContext(), text: "No files to restore");
   else
     await infoDialog(getGlobalContext(), text: "Restored ${pluralStr(restoreCount, "file")}");
+  
+  return true;
 }

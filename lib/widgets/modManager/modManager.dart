@@ -48,11 +48,11 @@ class _ModManagerState extends State<ModManager> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             NierListView(
-              // constraints: const BoxConstraints(maxWidth: 650),
               constraints: BoxConstraints(maxWidth: min(650, constraints.maxWidth - 500)),
               children: [
                 for (var i = 0; i < installedMods.length; i++)
                   NierButtonFancy(
+                    key: ValueKey(installedMods[i]),
                     onPressed: () => setState(() => installedMods.selectedMod.value = i),
                     isSelected: installedMods.selectedMod.value == i,
                     text: installedMods[i].name,

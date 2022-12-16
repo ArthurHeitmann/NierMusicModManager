@@ -187,7 +187,11 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
     }
     try {
       statusInfo.isBusy.value = true;
-      await revertAllAudioMods(prefs.waiPath);
+      var completed = await revertAllAudioMods(prefs.waiPath);
+      if (!completed) {
+        statusInfo.isBusy.value = false;
+        return;
+      }
       _mods.clear();
       selectedMod.value = -1;
       notifyListeners();

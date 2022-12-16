@@ -177,7 +177,6 @@ Future<void> _patchWaiAndWsps(List<AudioModChunkInfo> moddedWaiChunks, String tm
   }
 
   // backup original WAI
-  await backupFile(waiPath);
   var originalBackupPath = "$waiPath.original";
   await File(waiPath).copy(originalBackupPath);
   changedFiles.add(waiPath);
