@@ -164,9 +164,9 @@ class WaiFile {
   }
 
   int getIndexFromId(int wemId) {
-    var index = _getIndexFromIdBinarySearch(wemId);
-    if (index != -1)
-      return index;
+    // var index = _getIndexFromIdBinarySearch(wemId);
+    // if (index != -1)
+    //   return index;
     return wemStructs.indexWhere((wem) => wem.wemID == wemId);
   }
 
