@@ -1,16 +1,13 @@
-# nier_music_mod_manager
+# Nier Music Mod Manager
 
-A new Flutter project.
+A simple program to install and uninstall music mods in NieR:Automata.
 
-## Getting Started
+You can find more information on [Nexus Mods](https://www.nexusmods.com/nierautomata/mods/369).
 
-This project is a starting point for a Flutter application.
+## Building
 
-A few resources to get you started if this is your first Flutter project:
+1. [Setup Flutter for Windows](https://docs.flutter.dev/get-started/install/windows)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+2. Git clone this repository
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+3. Run with your IDE of choice or for release build `flutter build windows --release`
