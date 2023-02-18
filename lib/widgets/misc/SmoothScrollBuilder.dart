@@ -26,10 +26,12 @@ class SmoothScrollBuilder extends StatefulWidget {
 }
 
 class _SmoothScrollBuilderState extends State<SmoothScrollBuilder> {
+  static const ScrollPhysics desktopPhysics = NeverScrollableScrollPhysics();
+  static const ScrollPhysics mobilePhysics = BouncingScrollPhysics();
   double targetOffset = 0;
-  bool overrideScrollBehavior = true;
   bool isScrolling = false;
   Timer? isScrollingTimer;
+  ScrollPhysics? physics = desktopPhysics;
 
   @override
   void initState() {
@@ -45,33 +47,34 @@ class _SmoothScrollBuilderState extends State<SmoothScrollBuilder> {
     targetOffset = widget.controller.offset;
   }
 
+  void onScrollEnd() {
+    isScrolling = false;
+  }
+
   void onWheelScroll(PointerScrollEvent event) {
-    if (!overrideScrollBehavior)
-      setState(() => overrideScrollBehavior = true);
+    if (physics != desktopPhysics)
+      setState(() => physics = desktopPhysics);
     targetOffset += widget.stepSize * event.scrollDelta.dy.sign;
     targetOffset = clamp(targetOffset, 0, widget.controller.position.maxScrollExtent);
     if (targetOffset == widget.controller.offset)
       return;
     isScrolling = true;
     widget.controller.animateTo(targetOffset, duration: widget.duration, curve: Curves.linear);
-    isScrolling = true;
     isScrollingTimer?.cancel();
-    isScrollingTimer = Timer(widget.duration, () => isScrolling = false);
+    isScrollingTimer = Timer(widget.duration, onScrollEnd);
   }
 
-  void onContinuosScroll(double dy) {
-    if (overrideScrollBehavior)
-      setState(() => overrideScrollBehavior = false);
+  void onContinuosScroll() {
+    if (physics != mobilePhysics)
+      setState(() => physics = mobilePhysics);
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanUpdate: (event) => onContinuosScroll(event.delta.dy),
-      child: Listener(
-        onPointerSignal: (event) => event is PointerScrollEvent ? onWheelScroll(event) : null,
-        child: widget.builder(context, widget.controller, overrideScrollBehavior ? const NeverScrollableScrollPhysics() : widget.physics),
-      ),
+    return Listener(
+      onPointerSignal: (event) => event is PointerScrollEvent ? onWheelScroll(event) : null,
+      onPointerDown: (_) => onContinuosScroll(),
+      child: widget.builder(context, widget.controller, physics),
     );
   }
 }
