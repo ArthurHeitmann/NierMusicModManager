@@ -12,7 +12,6 @@ import '../utils/utils.dart';
 import '../widgets/misc/confirmDialog.dart';
 import '../widgets/misc/infoDialog.dart';
 import 'dataInstances.dart';
-import 'dataInstances.dart';
 import 'modInstaller.dart';
 import 'modsUninstaller.dart';
 
@@ -20,22 +19,26 @@ class AudioMod {
   final String name;
   final DateTime? installedOn;
   final List<AudioModChunkInfo> moddedWaiChunks;
+  final List<AudioModChunkInfo> moddedWaiEvents;
   final List<AudioModChunkInfo> moddedBnkChunks;
 
   const AudioMod({
     required this.name,
     required this.installedOn,
     required this.moddedWaiChunks,
+    required this.moddedWaiEvents,
     required this.moddedBnkChunks,
   });
 
   Future<void> _uninstall() async {
     var waiPath = prefs.waiPath;
-    await uninstallMods(waiPath, moddedWaiChunks, moddedBnkChunks);
+    await uninstallMods(waiPath, moddedWaiChunks, moddedWaiEvents, moddedBnkChunks);
     var metadataPath = join(dirname(waiPath), audioModsMetadataFileName);
     var metadata = await AudioModsMetadata.fromFile(metadataPath);
     for (var chunk in moddedWaiChunks)
       metadata.moddedWaiChunks.remove(chunk.id);
+    for (var chunk in moddedWaiEvents)
+      metadata.moddedWaiEventChunks.remove(chunk.id);
     for (var chunk in moddedBnkChunks)
       metadata.moddedBnkChunks.remove(chunk.id);
     await metadata.toFile(metadataPath);
@@ -66,6 +69,7 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
       name: name,
       installedOn: chunk.timestamp != null ? DateTime.fromMillisecondsSinceEpoch(chunk.timestamp!) : null,
       moddedWaiChunks: [],
+      moddedWaiEvents: [],
       moddedBnkChunks: [],
     );
     for (var chunk in metadata.moddedWaiChunks.values) {
@@ -73,6 +77,12 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
       if (!mods.containsKey(name))
         mods[name] = makeNewMod(name, chunk);
       mods[name]!.moddedWaiChunks.add(chunk);
+    }
+    for (var chunk in metadata.moddedWaiEventChunks.values) {
+      var name = chunk.name ?? "Uncategorized";
+      if (!mods.containsKey(name))
+        mods[name] = makeNewMod(name, chunk);
+      mods[name]!.moddedWaiEvents.add(chunk);
     }
     for (var chunk in metadata.moddedBnkChunks.values) {
       var name = chunk.name ?? "Uncategorized";
@@ -117,6 +127,7 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
       var installationDate = DateTime.now();
       var newChunks = [
         ...modMetadata.moddedWaiChunks.values,
+        ...modMetadata.moddedWaiEventChunks.values,
         ...modMetadata.moddedBnkChunks.values,
       ];
       for (var newChunk in newChunks) {
@@ -128,6 +139,7 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
       var metadataPath = join(dirname(waiPath), audioModsMetadataFileName);
       var metadata = await AudioModsMetadata.fromFile(metadataPath);
       metadata.moddedWaiChunks.addAll(modMetadata.moddedWaiChunks);
+      metadata.moddedWaiEventChunks.addAll(modMetadata.moddedWaiEventChunks);
       metadata.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks);
       await metadata.toFile(metadataPath);
 
@@ -140,11 +152,19 @@ class InstalledMods extends ChangeNotifier with IterableMixin<AudioMod> {
           name: modName,
           installedOn: installationDate,
           moddedWaiChunks: [],
+          moddedWaiEvents: [],
           moddedBnkChunks: [],
         );
         _mods.add(mod);
       }
+      void removeExistingChunks(List<AudioModChunkInfo> currentChunks, Iterable<AudioModChunkInfo> newChunks) {
+        currentChunks.removeWhere((chunk) => newChunks.any((newChunk) => newChunk.id == chunk.id));
+      }
+      removeExistingChunks(mod.moddedWaiChunks, modMetadata.moddedWaiChunks.values);
+      removeExistingChunks(mod.moddedWaiEvents, modMetadata.moddedWaiEventChunks.values);
+      removeExistingChunks(mod.moddedBnkChunks, modMetadata.moddedBnkChunks.values);
       mod.moddedWaiChunks.addAll(modMetadata.moddedWaiChunks.values);
+      mod.moddedWaiEvents.addAll(modMetadata.moddedWaiEventChunks.values);
       mod.moddedBnkChunks.addAll(modMetadata.moddedBnkChunks.values);
 
       notifyListeners();

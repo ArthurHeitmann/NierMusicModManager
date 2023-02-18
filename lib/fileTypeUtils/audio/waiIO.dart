@@ -1,7 +1,6 @@
 
 import 'dart:io';
-
-import 'package:path/path.dart';
+import 'dart:math';
 
 import '../../utils/utils.dart';
 import '../utils/ByteDataWrapper.dart';
@@ -131,25 +130,63 @@ class WemStruct {
   static const int size = 16;
 }
 
+class WaiEventStruct {
+  final int eventId;
+  final double unknown1;
+  final int unknown2;
+  final int unknown3_0;
+  final int unknown3_1;
+  final int unknown4;
+
+  WaiEventStruct(this.eventId, this.unknown1, this.unknown2, this.unknown3_0, this.unknown3_1, this.unknown4);
+
+  WaiEventStruct.read(ByteDataWrapper bytes) :
+    eventId = bytes.readUint32(),
+    unknown1 = bytes.readFloat32(),
+    unknown2 = bytes.readUint32(),
+    unknown3_0 = bytes.readUint16(),
+    unknown3_1 = bytes.readUint16(),
+    unknown4 = bytes.readUint32();
+
+  void write(ByteDataWrapper bytes) {
+    bytes.writeUint32(eventId);
+    bytes.writeFloat32(unknown1);
+    bytes.writeUint32(unknown2);
+    bytes.writeUint16(unknown3_0);
+    bytes.writeUint16(unknown3_1);
+    bytes.writeUint32(unknown4);
+  }
+
+  static const int size = 20;
+}
+
 class WaiFile {
   late final WaiHeader header;
   late final List<WspDirectory> wspDirectories;
   late final List<WspName> wspNames;
   late final List<WemStruct> wemStructs;
+  late final List<WaiEventStruct> waiEventStructs;
 
-  WaiFile(this.header, this.wspDirectories, this.wspNames, this.wemStructs);
+  WaiFile(this.header, this.wspDirectories, this.wspNames, this.wemStructs, this.waiEventStructs);
 
   WaiFile.read(ByteDataWrapper bytes) {
     header = WaiHeader.read(bytes);
     wspDirectories = List.generate(header.wspDirectoryCount, (i) => WspDirectory.read(bytes));
     wspNames = List.generate(header.wspNameCount, (i) => WspName.read(bytes));
     wemStructs = List.generate(header.structCount, (i) => WemStruct.read(bytes));
+    waiEventStructs = [];
+  }
+
+  WaiFile.readEvents(ByteDataWrapper bytes) {
+    header = WaiHeader.read(bytes);
+    waiEventStructs = List.generate(header.structCount, (i) => WaiEventStruct.read(bytes));
+    wspDirectories = [];
+    wspNames = [];
+    wemStructs = [];
   }
 
   void write(ByteDataWrapper bytes) {
-    header.wspDirectoryCount = wspDirectories.length;
-    header.wspNameCount = wspNames.length;
-    header.structCount = wemStructs.length;
+    header.structCount = max(wemStructs.length, waiEventStructs.length);
     header.write(bytes);
     for (WspDirectory wspDirectory in wspDirectories)
       wspDirectory.write(bytes);
@@ -157,6 +194,8 @@ class WaiFile {
       wspName.write(bytes);
     for (WemStruct wemStruct in wemStructs)
       wemStruct.write(bytes);
+    for (WaiEventStruct waiEventStruct in waiEventStructs)
+      waiEventStruct.write(bytes);
   }
 
   int getNameIndex(String name) {
@@ -177,9 +216,50 @@ class WaiFile {
     return wemStructs[index];
   }
 
-  int _getIndexFromIdBinarySearch(int wemId) {
+  int getEventIndexFromId(int wemId) {
+    // binary search
     int min = 0;
-    int max = wemStructs.length - 1;
+    int max = waiEventStructs.length - 1;
+    while (min <= max) {
+      int mid = (min + max) ~/ 2;
+      int midVal = waiEventStructs[mid].eventId;
+      if (midVal < wemId)
+        min = mid + 1;
+      else if (midVal > wemId)
+        max = mid - 1;
+      else
+        return mid;
+    }
+    return -1;
+  }
+
+  WaiEventStruct getEventFromId(int wemId) {
+    var index = getEventIndexFromId(wemId);
+    if (index == -1)
+      throw Exception("Wem ID $wemId not found");
+    return waiEventStructs[index];
+  }
+
+  int getEventInsertIndex(int eventId) {
+    // binary search
+    int min = 0;
+    int max = waiEventStructs.length - 1;
+    while (min <= max) {
+      int mid = (min + max) ~/ 2;
+      if (waiEventStructs[mid].eventId > eventId) {
+        max = mid - 1;
+      } else if (waiEventStructs[mid].eventId < eventId) {
+        min = mid + 1;
+      } else {
+        return mid;
+      }
+    }
+    return min;
+  }
+
+  int _getIndexFromIdBinarySearch(int wemId, WspDirectory wspDirectory) {
+    int min = wspDirectory.startStructIndex;
+    int max = wspDirectory.endStructIndex - 1;
     while (min <= max) {
       int mid = (min + max) ~/ 2;
       int midVal = wemStructs[mid].wemID;
@@ -193,7 +273,7 @@ class WaiFile {
     return -1;
   }
 
-  String? getWemDirectory(int wemIndex) {
+  String? getWemDirectoryFromI(int wemIndex) {
     for (WspDirectory wspDirectory in wspDirectories) {
       if (wspDirectory.startStructIndex <= wemIndex && wemIndex < wspDirectory.endStructIndex) {
         if (wspDirectory.name.isEmpty)
@@ -204,82 +284,25 @@ class WaiFile {
     throw Exception("Wem index $wemIndex not found in WAI file");
   }
 
-  Future<void> patchWems(List<WemPatch> patches, String exportDir) async {
-    if (patches.isEmpty)
-      return;
-    
-    print("Updating ${pluralStr(patches.length, "WEM")} in WAI...");
-
-    Map<WemPatch, int> patchToIndex = {
-      for (WemPatch patch in patches)
-        patch: wemStructs.indexWhere((wemStruct) => wemStruct.wemID == patch.wemID)
-    };
-
-    // update wem sizes
-    await Future.wait(patches.map((patch) async {
-      int? index = patchToIndex[patch];
-      if (index == null)
-        throw Exception("Wem ID ${patch.wemID} not found in WAI file");
-      WemStruct wemStruct = wemStructs[index];
-      wemStruct.wemEntrySize = await File(patch.wemPath).length();
-    }));
-
-    // get all used wsp names
-    Set<String> usedWspNames = patches
-      .map((patch) => patchToIndex[patch]!)
-      .map((index) => wemStructs[index].wemToWspName(wspNames))
-      .toSet();
-    
-    // group wem structs by wsp name
-    Map<String, List<WemStruct>> wspNameToWemStructs = {
-      for (String wspName in usedWspNames)
-        wspName: wemStructs.where((wemStruct) => wemStruct.wemToWspName(wspNames) == wspName).toList()
-    };
-
-    // update wem offsets per WSP (2048 byte alignment)
-    for (String wspName in usedWspNames) {
-      List<WemStruct> wspWemStructs = wspNameToWemStructs[wspName]!.toList();
-      wspWemStructs.sort((a, b) => a.wemOffset.compareTo(b.wemOffset));
-      int offset = 0;
-      for (WemStruct wemStruct in wspWemStructs) {
-        wemStruct.wemOffset = offset;
-        offset += wemStruct.wemEntrySize;
-        offset = (offset + 2047) & ~2047;
-      }
+  String? getWemDirectoryFromId(int wemID) {
+    for (WspDirectory wspDirectory in wspDirectories) {
+      int index = _getIndexFromIdBinarySearch(wemID, wspDirectory);
+      if (index == -1)
+        continue;
+      if (wspDirectory.name.isEmpty)
+        return null;
+      return wspDirectory.name;
     }
-
-    // create new WSP files
-    for (String wspName in usedWspNames) {
-      // determine folder, based on index of first wem struct
-      int firstWemIndex = wemStructs.indexWhere((wemStruct) => wemStruct.wemToWspName(wspNames) == wspName);
-      var waiDir = wspDirectories.where((dir) => dir.startStructIndex <= firstWemIndex && firstWemIndex < dir.endStructIndex).first;
-      String saveDir = waiDir.name.isEmpty ? exportDir : join(exportDir, waiDir.name);
-      // make wsp file
-      var wspPath = join(saveDir, wspName);
-      await backupFile(wspPath);
-      var wspFile = await File(wspPath).open(mode: FileMode.write);
-      // get a patch that uses this wsp
-      var patch = patches.firstWhere((patch) => wemStructs[patchToIndex[patch]!].wemToWspName(wspNames) == wspName);
-      var wspPatchDir = dirname(patch.wemPath);
-      var wspWemStructs = wspNameToWemStructs[wspName]!.toList();
-      wspWemStructs.sort((a, b) => a.wemOffset.compareTo(b.wemOffset));
-      int i = 0;
-      for (WemStruct wemStruct in wspWemStructs) {
-        var wemPath = join(wspPatchDir, wemStruct.toFileName(i));
-        var wemBytes = await File(wemPath).readAsBytes();
-        await wspFile.setPosition(wemStruct.wemOffset);
-        await wspFile.writeFrom(wemBytes);
-        var alignBytes = List.filled(2048 - wemBytes.length % 2048, 0);
-        await wspFile.writeFrom(alignBytes);
-        i++;
-      }
-      await wspFile.close();
-    }
-
-    print("Updated ${pluralStr(patches.length, "WEM")} in WAI");
+    throw Exception("Wem ID $wemID not found in WAI file");
   }
 
-  int get size => WaiHeader.size + wspDirectories.length * WspDirectory.size + wspNames.length * WspName.size + wemStructs.length * WemStruct.size;
+  int get size => (
+    WaiHeader.size +
+    wspDirectories.length * WspDirectory.size +
+    wspNames.length * WspName.size +
+    wemStructs.length * WemStruct.size +
+    waiEventStructs.length * WaiEventStruct.size
+  );
 }
 
 Future<void> makeWsp(List<WemStruct> wemFiles, Map<int, String> idToWemFiles, String savePath) async {
@@ -300,33 +323,30 @@ Future<void> makeWsp(List<WemStruct> wemFiles, Map<int, String> idToWemFiles, St
   }
 }
 
-class WemPatch {
-  final String wemPath;
-  final int wemID;
+class WspId {
+  final String? folder;
+  final int nameIndex;
+  final int index;
+  
+  WspId.fromWem(WemStruct wem, WaiFile wai) :
+    nameIndex = wem.wspNameIndex,
+    index = wem.wspIndex,
+    folder = wai.getWemDirectoryFromI(wai.getIndexFromId(wem.wemID));
+  
+  bool isWemInWsp(WemStruct wem, WaiFile wai) =>
+    wem.wspNameIndex == nameIndex && wem.wspIndex == index && wai.getWemDirectoryFromId(wem.wemID) == folder;
 
-  const WemPatch(this.wemPath, this.wemID);
-
-  @override
-  int get hashCode => Object.hash(wemPath, wemID);
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is WemPatch && other.wemPath == wemPath && other.wemID == wemID;
+  String toWspName(List<WspName> wspNames) {
+    int index1 = index ~/ 1000;
+    int index2 = index % 1000;
+    return "${wspNames[nameIndex].name}_${index1}_${index2.toString().padLeft(3, "0")}.wsp";
   }
-}
-class WspPatch {
-  final String wspName;
-  final List<WemPatch> wemFiles;
-
-  const WspPatch(this.wspName, this.wemFiles);
 
   @override
-  int get hashCode => Object.hash(wspName, wemFiles);
+  bool operator ==(Object other) =>
+    other is WspId &&
+    other.nameIndex == nameIndex && other.index == index && other.folder == folder;
   
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is WspPatch && other.wspName == wspName && other.wemFiles == wemFiles;
-  }
+  int get hashCode => Object.hash(nameIndex, index, folder);
 }

@@ -19,11 +19,15 @@ Future<bool> revertAllAudioMods(String waiPath) async {
   }
   var metadata = await AudioModsMetadata.fromFile(metadataPath);
   var wai = WaiFile.read(await ByteDataWrapper.fromFile(waiPath));
+  var wwiseInfoPath = join(dirname(waiPath), "WwiseInfo.wai");
   var bgmBankPath = join(dirname(waiPath), "bgm", "BGM.bnk");
 
+  // get list of changed files
   List<String> changedFiles = [
     if (metadata.moddedWaiChunks.isNotEmpty)
       waiPath,
+    if (metadata.moddedWaiEventChunks.isNotEmpty)
+      wwiseInfoPath,
     if (metadata.moddedBnkChunks.isNotEmpty)
       bgmBankPath,
   ];
@@ -31,7 +35,7 @@ Future<bool> revertAllAudioMods(String waiPath) async {
   for (var wemId in metadata.moddedWaiChunks.keys) {
     var wemIndex = wai.getIndexFromId(wemId);
     var wem = wai.wemStructs[wemIndex];
-    var dir = wai.getWemDirectory(wemIndex);
+    var dir = wai.getWemDirectoryFromI(wemIndex);
     var wspName = wem.wemToWspName(wai.wspNames);
     // modded WSP
     var wspPath = join(dirname(waiPath), "stream");
@@ -40,6 +44,8 @@ Future<bool> revertAllAudioMods(String waiPath) async {
     wspPath = join(wspPath, wspName);
     changedFiles.add(wspPath);
   }
+
+  // revert changes
   changedFiles = changedFiles.toSet().toList();
   changedFiles.sort();
 
@@ -78,6 +84,7 @@ Future<bool> revertAllAudioMods(String waiPath) async {
 
   metadata.name = null;
   metadata.moddedWaiChunks.clear();
+  metadata.moddedWaiEventChunks.clear();
   metadata.moddedBnkChunks.clear();
   await metadata.toFile(metadataPath);
 

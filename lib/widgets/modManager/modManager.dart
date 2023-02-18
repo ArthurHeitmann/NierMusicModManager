@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../stateManagement/dataInstances.dart';
-import '../../stateManagement/installedMods.dart';
 import '../theme/NierButton.dart';
 import '../theme/NierButtonFancy.dart';
 import '../theme/NierListView.dart';
@@ -57,7 +56,7 @@ class _ModManagerState extends State<ModManager> {
                     isSelected: installedMods.selectedMod.value == i,
                     text: installedMods[i].name,
                     icon: Icons.music_note,
-                    rightText: "【${installedMods[i].moddedWaiChunks.length + installedMods[i].moddedBnkChunks.length}】",
+                    rightText: "【${installedMods[i].moddedWaiChunks.length + installedMods[i].moddedWaiEvents.length + installedMods[i].moddedBnkChunks.length}】",
                   ),
                 if (installedMods.isEmpty)
                   const SizedBox(
@@ -79,7 +78,7 @@ class _ModManagerState extends State<ModManager> {
                   ),
                   NierSidebarRow(
                     leftText: "Affected data chunks:",
-                    rightText: "${selectedMod.moddedWaiChunks.length + selectedMod.moddedBnkChunks.length}",
+                    rightText: "${selectedMod.moddedWaiChunks.length + selectedMod.moddedWaiEvents.length + selectedMod.moddedBnkChunks.length}",
                   ),
                   if (selectedMod.installedOn != null)
                     NierSidebarRow(
@@ -124,6 +123,7 @@ class InstallModButton extends StatelessWidget {
           dialogTitle: "Select mod zip",
           allowMultiple: false,
           allowedExtensions: ["zip"],
+          lockParentWindow: true
         );
         if (zipPath == null)
           return;

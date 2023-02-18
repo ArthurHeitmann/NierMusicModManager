@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../stateManagement/dataInstances.dart';
-import '../../utils/utils.dart';
 import '../misc/ChangeNotifierWidget.dart';
 import '../misc/RowSeparated.dart';
 import '../theme/NierButton.dart';
@@ -104,6 +103,8 @@ class _MainLayoutState extends State<MainLayout> {
                     const Spacer(),
                     if (selectedTab == 0)
                       const InstallModButton(),
+                    if (selectedTab == 1)
+                      Text("ver.$currentVersion", textScaleFactor: 1.25,),
                   ],
                 ),
                 const SizedBox(height: 40),
