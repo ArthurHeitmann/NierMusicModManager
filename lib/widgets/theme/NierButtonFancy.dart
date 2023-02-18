@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../utils/utils.dart';
-import '../misc/debugContainer.dart';
 import '../misc/onHoverBuilder.dart';
 import 'cursorIcon.dart';
 import 'customTheme.dart';
@@ -45,7 +44,7 @@ class _NierButtonFancyState extends State<NierButtonFancy> {
   }
 
   void onHoverEnter() async {
-    final overlayState = Overlay.of(context)!;
+    final overlayState = Overlay.of(context);
     await waitForNextFrame();
 
     overlayEntry = OverlayEntry(

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../utils/utils.dart';
 import '../misc/SmoothScrollBuilder.dart';
-import '../misc/debugContainer.dart';
 import 'customTheme.dart';
 
 class NierListView extends StatefulWidget {

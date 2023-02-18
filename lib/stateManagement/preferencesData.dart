@@ -10,7 +10,7 @@ import '../main.dart';
 import '../widgets/misc/infoDialog.dart';
 
 class PreferencesData {
-  Future<SharedPreferences> _prefsFuture;
+  final Future<SharedPreferences> _prefsFuture;
   SharedPreferences? _prefs;
   String _waiPath = "";
   String get waiPath => _waiPath;

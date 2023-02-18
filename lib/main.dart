@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'stateManagement/dataInstances.dart';
-import 'stateManagement/preferencesData.dart';
-import 'statemanagement/installedMods.dart';
 import 'utils/loggingWrapper.dart';
 import 'widgets/modManager/mainLayout.dart';
 import 'widgets/theme/customTheme.dart';
