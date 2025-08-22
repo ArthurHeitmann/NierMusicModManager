@@ -53,7 +53,6 @@ class _MyAppState extends State<MyApp> {
       title: "Nier Music Mod Manager",
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        backgroundColor: NierTheme.light,
         primaryColor: NierTheme.dark,
         textTheme: Theme.of(context).textTheme.apply(
           fontFamily: "FiraCode",
@@ -73,6 +72,7 @@ class _MyAppState extends State<MyApp> {
         colorScheme: const ColorScheme.light(
           primary: NierTheme.dark,
           secondary: NierTheme.brownDark,
+          surface: NierTheme.light,
         ),
       ),
       home: MyAppBody(key: _rootKey)

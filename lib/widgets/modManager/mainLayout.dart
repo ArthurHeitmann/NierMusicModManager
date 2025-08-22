@@ -82,7 +82,7 @@ class _MainLayoutState extends State<MainLayout> {
                       children: [
                         Text(
                           tabConfigs[selectedTab],
-                          style: Theme.of(context).textTheme.headline4!.copyWith(
+                          style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                             fontSize: 64,
                             letterSpacing: 8
                           )
@@ -91,7 +91,7 @@ class _MainLayoutState extends State<MainLayout> {
                           offset: const Offset(8, 10),
                           child: Text(
                             tabConfigs[selectedTab],
-                            style: Theme.of(context).textTheme.headline4!.copyWith(
+                            style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                               fontSize: 64,
                               letterSpacing: 8,
                               color: NierTheme.dark.withOpacity(0.25),

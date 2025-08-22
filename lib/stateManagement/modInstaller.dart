@@ -19,7 +19,7 @@ Future<AudioModsMetadata> installMod(String zipPath, String waiPath) async {
   try {
     var fs = InputFileStream(zipPath);
     var archive = ZipDecoder().decodeBuffer(fs);
-    extractArchiveToDisk(archive, tmpDir.path);
+    await extractArchiveToDisk(archive, tmpDir.path);
     fs.close();
 
     var metadataFile = join(tmpDir.path, audioModsMetadataFileName);
@@ -114,7 +114,7 @@ Future<void> _patchWaiAndWsps(Map<int, AudioModChunkInfo> moddedWaiChunks, Strin
     var firstWemInWsp = wspWems.first;
     var wspDir = wspId.folder;
     var wspSaveDir = join(dirname(waiPath), "stream");
-    var modWspDir = tmpDir;
+    var modWspDir = join(tmpDir, "stream");
     if (wspDir != null) {
       wspSaveDir = join(wspSaveDir, wspDir);
       modWspDir = join(modWspDir, wspDir);
@@ -122,7 +122,7 @@ Future<void> _patchWaiAndWsps(Map<int, AudioModChunkInfo> moddedWaiChunks, Strin
     var wspName = firstWemInWsp.wemToWspName(newWai.wspNames);
 
     var originalWspPath = join(wspSaveDir, wspName);
-    var modWspPath = join(modWspDir, "stream", wspName);
+    var modWspPath = join(modWspDir, wspName);
     var tmpNewWspPath = join(tmpDir, wspName);
     await File(originalWspPath).copy(tmpNewWspPath);
 
